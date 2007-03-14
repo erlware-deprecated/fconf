@@ -4,7 +4,7 @@
 %%%  Name registry for started processes. 
 %%% 
 %%% @end
-n%%% @copyright (C) 2007 Eric Merritt
+%%% @copyright (C) 2007 Eric Merritt
 %%% Created : 11 Mar 2007 by Eric Merritt <cyberlync@gmail.com>
 %%%-------------------------------------------------------------------
 -module(fconf_registry).
@@ -12,7 +12,8 @@ n%%% @copyright (C) 2007 Eric Merritt
 -behaviour(gen_server).
 
 %% API
--export([start_link/0]).
+-export([start_link/0, find_registered/1, register_config/2, 
+        unregister_config/1]).
 
 
 %% gen_server callbacks
@@ -35,6 +36,36 @@ n%%% @copyright (C) 2007 Eric Merritt
 %%--------------------------------------------------------------------
 start_link() ->
     gen_server:start_link({local, ?SERVER}, ?MODULE, [], []).
+
+%%--------------------------------------------------------------------
+%% @doc 
+%%  Find the pid registered by the name. 
+%%
+%% @spec find_registered(Name) -> Pid.
+%% @end
+%%--------------------------------------------------------------------
+find_registered(Name) ->
+    gen_server:call(?SERVER, {get, Name}).
+
+%%--------------------------------------------------------------------
+%% @doc 
+%%  register a pid at the name. If the name already exists
+%%  associate withthe new pid.
+%% @spec register(Name, Pid) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+register_config(Name, Pid) ->
+    gen_server:cast(?SERVER, {register, Name, Pid}).
+
+%%--------------------------------------------------------------------
+%% @doc 
+%%  Remove a registered name/pid pair.
+%% @spec unregister(Name) -> ok.
+%% @end
+%%--------------------------------------------------------------------
+unregister_config(Name) ->
+    gen_server:cast(?SERVER, {unregister, Name}).
+
 
 %%====================================================================
 %% gen_server callbacks
@@ -83,9 +114,9 @@ handle_call({get, Name}, _From, State = #state{names=Names}) ->
 %% @end 
 %%--------------------------------------------------------------------
 handle_cast({register, Name, Pid}, #state{names=Names}) ->
-    {noreply, #state{names=dict:store(Name, Pid, Names)};
+    {noreply, #state{names=dict:store(Name, Pid, Names)}};
 handle_cast({unregister, Name}, #state{names=Names}) ->
-    {noreply, #state{names=dict:erase(Name,Names)}.
+    {noreply, #state{names=dict:erase(Name,Names)}}.
      
 
 %%--------------------------------------------------------------------

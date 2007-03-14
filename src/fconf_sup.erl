@@ -11,7 +11,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_config/2]).
+-export([start_link/0]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -46,20 +46,13 @@ start_link() ->
 %% specifications.
 %% @end
 %%--------------------------------------------------------------------
-init([Parser]) ->
-    AChild = {fconf_engine, {fconfig, ,start_link,[Parser]},
-              permanent,2000,worker,[fconf_engine]},
-    {ok,{{simple_one_for_all,0,1}, [AChild]}}.
+init([]) ->
+    Registry  = {registry,{fconf_registry,start_link,[]},
+                 permanent,2000,worker,[fconf_registry]},
+    Sup = {sup, {fconf_conf_sup, start_link,[]},
+           permanent,2000,worker,[fconf_conf_sup]},
+    {ok,{{one_for_all,0,1}, [Registry, Sup]}}.
 
-%%-------------------------------------------------------------------- 
-%% @doc 
-%%  Start a new config with the specified config name.
-%% 
-%% @spec start_config(Name) -> ok. 
-%% @end
-%%--------------------------------------------------------------------
-start_config(Name, Handler) ->
-    supervisor:start_child(?SERVER, [Name, Handler]).
 
 %%====================================================================
 %% Internal functions

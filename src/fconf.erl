@@ -32,8 +32,8 @@
 -module(fconf).
 
 
--export([start_config/2, parse_config/1, add/2, get_value/1, 
-         get_value/2, delete/1, exit/0]).
+-export([start_config/2, parse_config/2, store/3, get_value/2, 
+         get_value/3, delete/2, exit/1]).
 
 %%====================================================================
 %% API 
@@ -46,7 +46,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_config(Name, Handler) ->
-    fconf_sup:start_config(Name, Handler).
+    fconf_conf_sup:start_config(Name, Handler).
 
 
 %%--------------------------------------------------------------------
@@ -56,8 +56,9 @@ start_config(Name, Handler) ->
 %%  Parse the buildfile specified and merge it at the top level.
 %% @end
 %%--------------------------------------------------------------------
-parse_config(BuildFile) ->
-    gen_server:call(fconf_main, {parse, self(), BuildFile}, 5000).
+parse_config(Name, BuildFile) ->
+    Pid = fconf_registry:find_registered(Name),
+    gen_server:call(Pid, {parse, BuildFile}, 5000).
 
 
 %%-------------------------------------------------------------------
@@ -67,11 +68,12 @@ parse_config(BuildFile) ->
 %%  Add a key to the config.
 %% @dec
 %%-------------------------------------------------------------------
-add({path, Path}, Value) ->
-    gen_server:cast(fconf_main, {add, Path, Value},
+store(Name, Path = {path, _}, Value) ->
+    Pid = fconf_registry:find_registered(Name),
+    gen_server:cast(Pid, {add, Path, Value}),
     ok;
-add(Key, Value) when is_list(Key)->
-    add(tuplize(Key, [], []), Value).
+store(Name, Key, Value) when is_list(Key)->
+    store(Name, tuplize(Key, [], []), Value).
 
 
 %%-------------------------------------------------------------------
@@ -81,10 +83,11 @@ add(Key, Value) when is_list(Key)->
 %%  Get a value from the config.
 %% @dec
 %%-------------------------------------------------------------------
-get_value({path, Path}) ->
-    gen_server:call(fconf_main, {path, Path}).
-get_value(Key) ->
-    get_value(tuplize(Key, [], [])).
+get_value(Name, Path = {path, _}) ->
+    Pid = fconf_registry:find_registered(Name),
+    gen_server:call(Pid, {get, Path});
+get_value(Name, Key) ->
+    get_value(Name, tuplize(Key, [], [])).
 
 %%--------------------------------------------------------------------
 %% @spec get(Key, Default) -> Value | Default.
@@ -94,8 +97,8 @@ get_value(Key) ->
 %%  returns the requested default instead of just undefined.
 %% @end
 %%--------------------------------------------------------------------
-get_value(Key, Default) ->
-    case get_value(Key) of
+get_value(Name, Key, Default) ->
+    case get_value(Name, Key) of
         undefined ->
             Default;
         Else ->
@@ -109,10 +112,11 @@ get_value(Key, Default) ->
 %%  Delete a value from the config.
 %% @dec
 %%-------------------------------------------------------------------
-delete({path, Key}) ->
-    gen_server:cast(fconf_main, {delete,  Key};
-delete(Key) when is_list(Key) ->
-    delete(tuplize(Key, [], [])).
+delete(Name, Key = {path, _}) ->
+    Pid = fconf_registry:find_registered(Name),
+    gen_server:cast(Pid, {delete,  Key});
+delete(Name, Key) when is_list(Key) ->
+    delete(Name, tuplize(Key, [], [])).
 
 %%--------------------------------------------------------------------
 %% @spec exit() -> ok.
@@ -121,8 +125,9 @@ delete(Key) when is_list(Key) ->
 %%  Tell sin_config to shutdown.
 %% @end
 %%--------------------------------------------------------------------
-exit() ->
-    gen_server:cast(fconf_main, exit).
+exit(Name) ->
+    Pid = fconf_registry:find_registered(Name),
+    gen_server:cast(Pid, exit).
 %%====================================================================
 %% Internal Functions
 %%====================================================================

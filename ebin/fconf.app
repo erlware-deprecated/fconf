@@ -4,7 +4,10 @@
   {vsn, "0.1.0"},           
   {modules, [fconf_app,   
              fconf_sup,
-             fconf]},
+             fconf_conf_sup,
+             fconf,
+             fconf_engine,
+             fconf_registry]},
   {registered, []},
   {applications, [kernel, stdlib]},
   {mod, {fconf_app, []}}]}.
