@@ -184,7 +184,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private
 %%--------------------------------------------------------------------
 handle_parse_output(Store, NewStore) ->
-    dict:merge(fun merge_key/3, Store, NewStore).
+    dict:merge(fun merge_key/3, NewStore, Store).
 
 
 %%-------------------------------------------------------------------- 
@@ -197,7 +197,7 @@ handle_parse_output(Store, NewStore) ->
 merge_key(_, Val1, Val2) ->
     case both_dicts(Val1, Val2) of
         true ->
-            dict:merge(Val1, Val2);
+            dict:merge(fun merge_key/3, Val1, Val2);
         false ->
             Val2
     end.
@@ -225,7 +225,12 @@ both_dicts(_, _) ->
 %% @private
 %%--------------------------------------------------------------------
 get_item([H], Dict) ->
-    dict:find(H, Dict);
+    case is_dict(Dict) of
+        true ->
+            dict:find(H, Dict);
+        false ->
+            error
+    end;
 get_item([H | T], Dict) ->
     case is_dict(Dict) of
         true ->
@@ -285,7 +290,12 @@ delete([], _Dict) ->
 %% @private
 %%--------------------------------------------------------------------
 store([H], Dict, Value) ->
-    dict:store(H, Value, Dict);
+    case is_dict(Dict) of
+        true ->
+            dict:store(H, Value, Dict);
+        false ->
+            error
+    end;
 store([H | T], Dict, Value) ->
     case is_dict(Dict) of
         true ->
