@@ -1,25 +1,25 @@
 %%%-------------------------------------------------------------------
 %%% Copyright (c) 2006, 2007 Eric Merritt
 %%%
-%%% Permission is hereby granted, free of charge, to any 
-%%% person obtaining a copy of this software and associated 
-%%% documentation files (the "Software"), to deal in the 
-%%% Software without restriction, including without limitation 
+%%% Permission is hereby granted, free of charge, to any
+%%% person obtaining a copy of this software and associated
+%%% documentation files (the "Software"), to deal in the
+%%% Software without restriction, including without limitation
 %%% the rights to use, copy, modify, merge, publish, distribute,
-%%% sublicense, and/or sell copies of the Software, and to permit 
-%%% persons to whom the Software is furnished to do so, subject to 
+%%% sublicense, and/or sell copies of the Software, and to permit
+%%% persons to whom the Software is furnished to do so, subject to
 %%% the following conditions:
 %%%
-%%% The above copyright notice and this permission notice shall 
+%%% The above copyright notice and this permission notice shall
 %%% be included in all copies or substantial portions of the Software.
 %%%
 %%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-%%% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-%%% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+%%% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+%%% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
 %%% HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 %%% WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
+%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%---------------------------------------------------------------------------
 %%% @author Eric Merritt <cyberlync@gmail.com>
@@ -32,27 +32,35 @@
 -module(fconf).
 
 
--export([start_config/2, parse_config/2, store/3, get_value/2, 
+-export([start_config/2, stop_config/1, parse_config/2, store/3, get_value/2,
          get_value/3, delete/2, exit/1]).
 
 %%====================================================================
-%% API 
+%% API
 %%====================================================================
 
 %%--------------------------------------------------------------------
-%% @doc 
-%%   Start a new config 
-%% @spec parse_config(BuildFile) -> ok.
+%% @doc
+%%   Start a new config
+%% @spec parse_config(BuildFile) -> ok
 %% @end
 %%--------------------------------------------------------------------
 start_config(Name, Handler) ->
     fconf_conf_sup:start_config(Name, Handler).
 
+%%--------------------------------------------------------------------
+%% @doc
+%%  Stop the config identified by the name.
+%% @spec stop_config(Name) -> ok
+%% @end
+%%--------------------------------------------------------------------
+stop_config(Name) ->
+    fconf_conf_sup:stop_config(Name).
 
 %%--------------------------------------------------------------------
-%% @spec parse_config(BuildFile) -> ok.
-%% 
-%% @doc 
+%% @spec parse_config(BuildFile) -> ok
+%%
+%% @doc
 %%  Parse the buildfile specified and merge it at the top level.
 %% @end
 %%--------------------------------------------------------------------
@@ -91,8 +99,8 @@ get_value(Name, Key) ->
 
 %%--------------------------------------------------------------------
 %% @spec get(Key, Default) -> Value | Default.
-%% 
-%% @doc 
+%%
+%% @doc
 %%  Attempts to get the specified key. If the key doesn't exist it
 %%  returns the requested default instead of just undefined.
 %% @end
@@ -120,21 +128,22 @@ delete(Name, Key) when is_list(Key) ->
 
 %%--------------------------------------------------------------------
 %% @spec exit() -> ok.
-%% 
-%% @doc 
+%%
+%% @doc
 %%  Tell sin_config to shutdown.
 %% @end
 %%--------------------------------------------------------------------
 exit(Name) ->
     Pid = fconf_registry:find_registered(Name),
     gen_server:cast(Pid, exit).
+
 %%====================================================================
 %% Internal Functions
 %%====================================================================
 %%--------------------------------------------------------------------
 %% @spec tuplize(Key], TAcc, Acc) -> {path, PathList}.
-%% 
-%% @doc 
+%%
+%% @doc
 %%  Split the dot seperated path into a true path type.
 %% @end
 %% @private
