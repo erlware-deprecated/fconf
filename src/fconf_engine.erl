@@ -1,25 +1,25 @@
 %%%-------------------------------------------------------------------
 %%% Copyright (c) 2006, 2007 Eric Merritt
 %%%
-%%% Permission is hereby granted, free of charge, to any 
-%%% person obtaining a copy of this software and associated 
-%%% documentation files (the "Software"), to deal in the 
-%%% Software without restriction, including without limitation 
+%%% Permission is hereby granted, free of charge, to any
+%%% person obtaining a copy of this software and associated
+%%% documentation files (the "Software"), to deal in the
+%%% Software without restriction, including without limitation
 %%% the rights to use, copy, modify, merge, publish, distribute,
-%%% sublicense, and/or sell copies of the Software, and to permit 
-%%% persons to whom the Software is furnished to do so, subject to 
+%%% sublicense, and/or sell copies of the Software, and to permit
+%%% persons to whom the Software is furnished to do so, subject to
 %%% the following conditions:
 %%%
-%%% The above copyright notice and this permission notice shall 
+%%% The above copyright notice and this permission notice shall
 %%% be included in all copies or substantial portions of the Software.
 %%%
 %%% THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
-%%% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND 
-%%% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT 
+%%% EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+%%% OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+%%% NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
 %%% HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
 %%% WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR 
+%%% OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 %%% OTHER DEALINGS IN THE SOFTWARE.
 %%%---------------------------------------------------------------------------
 %%% @author Eric Merritt <cyberlync@gmail.com>
@@ -48,14 +48,14 @@
 -record(state, {parser, store, name}).
 
 %%====================================================================
-%% API 
+%% API
 %%====================================================================
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Starts the server
 %%
-%% @spec start_link() -> {ok,Pid} | ignore | {error,Error}.
-%% @end 
+%% @spec start_link(Name, Parser) -> {ok,Pid} | ignore | {error,Error}
+%% @end
 %%--------------------------------------------------------------------
 start_link(Name, Parser) ->
     gen_server:start_link(?MODULE, [Name, Parser], []).
@@ -66,21 +66,21 @@ start_link(Name, Parser) ->
 %%====================================================================
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Initiates the server
 %%
 %% @spec init(Args) -> {ok, State} |
 %%                     {ok, State, Timeout} |
 %%                     ignore               |
-%%                     {stop, Reason}.
-%% @end 
+%%                     {stop, Reason}
+%% @end
 %%--------------------------------------------------------------------
 init([Name, Parser]) ->
     fconf_registry:register_config(Name, self()),
     {ok, #state{parser=Parser, name=Name, store=dict:new()}}.
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Handling call messages
 %%
 %% @spec handle_call(Request, From, State) -> {reply, Reply, State} |
@@ -88,8 +88,8 @@ init([Name, Parser]) ->
 %%                                      {noreply, State} |
 %%                                      {noreply, State, Timeout} |
 %%                                      {stop, Reason, Reply, State} |
-%%                                      {stop, Reason, State}.
-%% @end 
+%%                                      {stop, Reason, State}
+%% @end
 %%--------------------------------------------------------------------
 handle_call({get, {path, Key}}, _From, State = #state{store=Store}) ->
     case get_item(Key, Store) of
@@ -104,14 +104,14 @@ handle_call({parse, BuildFile}, _From, State = #state{store=Store,
     {reply, ok, State#state{store=NStore}}.
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Handling cast messages
 %%
 %% @spec handle_cast(Msg, State) -> {noreply, State} |
 %%                                      {noreply, State, Timeout} |
-%%                                      {stop, Reason, State}.
-%% 
-%% @end 
+%%                                      {stop, Reason, State}
+%%
+%% @end
 %%--------------------------------------------------------------------
 handle_cast({add, {path, Key}, Value}, State = #state{store=Store}) ->
     case store(Key, Store, Value) of
@@ -134,37 +134,37 @@ handle_cast(exit, _) ->
 
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Handling all non call/cast messages
 %%
 %% @spec handle_info(Info, State) -> {noreply, State} |
 %%                                       {noreply, State, Timeout} |
-%%                                       {stop, Reason, State}.
-%% @end 
+%%                                       {stop, Reason, State}
+%% @end
 %%--------------------------------------------------------------------
 handle_info(_Info, State) ->
     {noreply, State}.
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% This function is called by a gen_server when it is about to
 %% terminate. It should be the opposite of Module:init/1 and do any necessary
 %% cleaning up. When it returns, the gen_server terminates with Reason.
 %% The return value is ignored.
 %%
-%% @spec terminate(Reason, State) -> void().
-%% @end 
+%% @spec terminate(Reason, State) -> void()
+%% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, #state{name=Name}) ->
     fconf_registry:unregister_config(Name),
     ok.
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %% Convert process state when code is changed
 %%
-%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}.
-%% @end 
+%% @spec code_change(OldVsn, State, Extra) -> {ok, NewState}
+%% @end
 %%--------------------------------------------------------------------
 code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
@@ -175,11 +175,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%====================================================================
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Handle the output of parseconfig. If an error occures send
 %%  a message to the calling process to let them know the problem
 %% then continue.
-%% @spec handle_parse_output(Pid, State, Ret) -> State | NewState.
+%% @spec handle_parse_output(Store, NewStore) -> NewStore2
 %% @end
 %% @private
 %%--------------------------------------------------------------------
@@ -187,10 +187,10 @@ handle_parse_output(Store, NewStore) ->
     dict:merge(fun merge_key/3, NewStore, Store).
 
 
-%%-------------------------------------------------------------------- 
-%% @doc 
-%%  merge the values for key. 
-%% @spec merge_key(Key, V1, V2) -> NVal.
+%%--------------------------------------------------------------------
+%% @doc
+%%  merge the values for key.
+%% @spec merge_key(Key, V1, V2) -> NVal
 %% @end
 %% @private
 %%--------------------------------------------------------------------
@@ -204,9 +204,9 @@ merge_key(_, Val1, Val2) ->
 
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Test if both values are dicts.
-%% @spec both_dicts(V1, V2) -> true | false.
+%% @spec both_dicts(V1, V2) -> true | false
 %% @end
 %% @private
 %%--------------------------------------------------------------------
@@ -218,9 +218,9 @@ both_dicts(_, _) ->
 
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Get the item from the dict recursivly pulling each value.
-%% @spec get_item(Name, Dict) -> NDict.
+%% @spec get_item(Name, Dict) -> NDict
 %% @end
 %% @private
 %%--------------------------------------------------------------------
@@ -248,9 +248,9 @@ get_item([], _Dict) ->
 
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Delete the value from the dict recursively.
-%% @spec delete(Key, Dict) -> NDict.
+%% @spec delete(Key, Dict) -> NDict
 %% @end
 %% @private
 %%--------------------------------------------------------------------
@@ -283,7 +283,7 @@ delete([], _Dict) ->
 
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Store the value recursively into the dict and sub dicts.
 %% @spec store(Key, Dict, Value) -> NDict
 %% @end
@@ -323,9 +323,9 @@ store([], _Dict, _Value) ->
     error.
 
 %%--------------------------------------------------------------------
-%% @doc 
+%% @doc
 %%  Check to see if the value is a dict.
-%% @spec is_dict(Value) -> true | false.
+%% @spec is_dict(Value) -> true | false
 %% @end
 %% @private
 %%--------------------------------------------------------------------

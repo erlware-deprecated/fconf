@@ -42,7 +42,8 @@
 %%--------------------------------------------------------------------
 %% @doc
 %%   Start a new config
-%% @spec parse_config(BuildFile) -> ok
+%%
+%% @spec start_config(Name, Handler) -> ok
 %% @end
 %%--------------------------------------------------------------------
 start_config(Name, Handler) ->
@@ -58,10 +59,10 @@ stop_config(Name) ->
     fconf_conf_sup:stop_config(Name).
 
 %%--------------------------------------------------------------------
-%% @spec parse_config(BuildFile) -> ok
-%%
 %% @doc
 %%  Parse the buildfile specified and merge it at the top level.
+%%
+%% @spec parse_config(Name, BuildFile) -> ok
 %% @end
 %%--------------------------------------------------------------------
 parse_config(Name, BuildFile) ->
@@ -70,11 +71,11 @@ parse_config(Name, BuildFile) ->
 
 
 %%-------------------------------------------------------------------
-%% @spec add(Key::atom(), Value::any()) -> ok.
-%%
 %% @doc
 %%  Add a key to the config.
-%% @dec
+%%
+%% @spec store(Name, Path, Value::any()) -> ok
+%% @end
 %%-------------------------------------------------------------------
 store(Name, Path = {path, _}, Value) ->
     Pid = fconf_registry:find_registered(Name),
@@ -85,11 +86,11 @@ store(Name, Key, Value) when is_list(Key)->
 
 
 %%-------------------------------------------------------------------
-%% @spec get(Key::atom()) -> Value | undefined.
-%%
 %% @doc
 %%  Get a value from the config.
-%% @dec
+%%
+%% @spec get_value(Name, Path) -> Value | undefined
+%% @end
 %%-------------------------------------------------------------------
 get_value(Name, Path = {path, _}) ->
     Pid = fconf_registry:find_registered(Name),
@@ -98,11 +99,11 @@ get_value(Name, Key) ->
     get_value(Name, tuplize(Key, [], [])).
 
 %%--------------------------------------------------------------------
-%% @spec get(Key, Default) -> Value | Default.
-%%
 %% @doc
 %%  Attempts to get the specified key. If the key doesn't exist it
 %%  returns the requested default instead of just undefined.
+%%
+%% @spec get_value(Name, Key, Default) -> Value | Default
 %% @end
 %%--------------------------------------------------------------------
 get_value(Name, Key, Default) ->
@@ -114,11 +115,11 @@ get_value(Name, Key, Default) ->
     end.
 
 %%-------------------------------------------------------------------
-%% @spec delete(Key) -> ok.
-%%
 %% @doc
 %%  Delete a value from the config.
-%% @dec
+%%
+%% @spec delete(Name, Key) -> ok
+%% @end
 %%-------------------------------------------------------------------
 delete(Name, Key = {path, _}) ->
     Pid = fconf_registry:find_registered(Name),
@@ -127,10 +128,10 @@ delete(Name, Key) when is_list(Key) ->
     delete(Name, tuplize(Key, [], [])).
 
 %%--------------------------------------------------------------------
-%% @spec exit() -> ok.
-%%
 %% @doc
 %%  Tell sin_config to shutdown.
+%%
+%% @spec exit(Name) -> ok
 %% @end
 %%--------------------------------------------------------------------
 exit(Name) ->
@@ -141,10 +142,10 @@ exit(Name) ->
 %% Internal Functions
 %%====================================================================
 %%--------------------------------------------------------------------
-%% @spec tuplize(Key], TAcc, Acc) -> {path, PathList}.
-%%
 %% @doc
 %%  Split the dot seperated path into a true path type.
+%%
+%% @spec tuplize(Key, TAcc, Acc) -> {path, PathList}
 %% @end
 %% @private
 %%--------------------------------------------------------------------
