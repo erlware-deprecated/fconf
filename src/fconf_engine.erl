@@ -58,7 +58,7 @@
 %% @end
 %%--------------------------------------------------------------------
 start_link(Name, Parser) ->
-    gen_server:start_link(?MODULE, [Name, Parser], []).
+    gen_server:start_link(?MODULE, [Name, Parser], {obj, []}).
 
 
 %%====================================================================
@@ -77,7 +77,7 @@ start_link(Name, Parser) ->
 %%--------------------------------------------------------------------
 init([Name, Parser]) ->
     fconf_registry:register_config(Name, self()),
-    {ok, #state{parser=Parser, name=Name, store=dict:new()}}.
+    {ok, #state{parser=Parser, name=Name, store={obj, []}}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -184,7 +184,7 @@ code_change(_OldVsn, State, _Extra) ->
 %% @private
 %%--------------------------------------------------------------------
 handle_parse_output(Store, NewStore) ->
-    dict:merge(fun merge_key/3, NewStore, Store).
+    merge(NewStore, Store, []).
 
 
 %%--------------------------------------------------------------------
@@ -194,146 +194,154 @@ handle_parse_output(Store, NewStore) ->
 %% @end
 %% @private
 %%--------------------------------------------------------------------
-merge_key(_, Val1, Val2) ->
-    case both_dicts(Val1, Val2) of
+merge_tuple(Val1, Val2) ->
+    case both_objects(Val1, Val2) of
         true ->
-            dict:merge(fun merge_key/3, Val1, Val2);
+            merge(Val1, Val2, []);
         false ->
             Val2
     end.
 
+merge([Tuple = {NewKey, NewValue} | RestNew], Store, Acc) ->
+    case lists:keysearch(NewKey, 1, Store) of
+        {value, {_, Value}} ->
+            merge(RestNew, Store, [{NewKey, merge_tuple(NewValue, Value)} |
+                                   Acc]);
+        false  ->
+            merge(RestNew, Store, [Tuple | Acc])
+    end;
+merge({obj, NewObject}, {obj, OldObject}, Acc) ->
+    merge(NewObject, OldObject,  Acc);
+merge([], _, Acc) ->
+    {obj, Acc}.
 
 %%--------------------------------------------------------------------
 %% @doc
 %%  Test if both values are dicts.
-%% @spec both_dicts(V1, V2) -> true | false
+%%
+%% @spec (V1, V2) -> true | false
 %% @end
 %% @private
 %%--------------------------------------------------------------------
-both_dicts({dict, _, _, _, _, _, _, _, _},
-           {dict, _, _, _, _, _, _, _, _}) ->
+both_objects({obj, _}, {obj, _}) ->
     true;
-both_dicts(_, _) ->
+both_objects(_, _) ->
     false.
 
 
 %%--------------------------------------------------------------------
 %% @doc
 %%  Get the item from the dict recursivly pulling each value.
-%% @spec get_item(Name, Dict) -> NDict
+%% @spec (Name, Object) -> {ok, Item} | error
 %% @end
 %% @private
 %%--------------------------------------------------------------------
-get_item([H], Dict) ->
-    case is_dict(Dict) of
-        true ->
-            dict:find(H, Dict);
+get_item([H], {obj, Object}) ->
+    case lists:keysearch(H, 1, Object) of
+        {value, {H, Value}} ->
+            {ok, Value};
         false ->
             error
     end;
-get_item([H | T], Dict) ->
-    case is_dict(Dict) of
-        true ->
-            case dict:find(H, Dict) of
-                {ok, Value} ->
-                    get_item(T, Value);
-                Err ->
-                    Err
-            end;
+get_item([H | T], {obj, Object}) ->
+    case lists:keysearch(H, 1, Object) of
+        {value, {H, Value}} ->
+            get_item(T, Value);
         false ->
             error
     end;
-get_item([], _Dict) ->
+get_item([], _) ->
     error.
 
 
 %%--------------------------------------------------------------------
 %% @doc
 %%  Delete the value from the dict recursively.
-%% @spec delete(Key, Dict) -> NDict
+%% @spec (Key, Object) -> NewObject | Error
 %% @end
 %% @private
 %%--------------------------------------------------------------------
-delete([H], Dict) ->
-    case is_dict(Dict) of
-        true ->
-            dict:erase(H, Dict);
-        false ->
-            error
-    end;
-delete([H | T], Dict) ->
-    case is_dict(Dict) of
-        true ->
-            case dict:find(H, Dict) of
-                {ok, TValue} ->
-                    case delete(T, TValue) of
-                        error ->
-                            error;
-                        N ->
-                            dict:store(H, N, Dict)
-                    end;
-                _ ->
-                    error
+delete([H], {obj, Value}) ->
+    {obj, lists:keydelete(H, 1, Value)};
+delete([H | T], {obj, Value}) ->
+    case lists:keysearch(H, 1, Value) of
+        {value, {H, TValue}} ->
+            case delete(T, TValue) of
+                error ->
+                    error;
+                N ->
+                    {obj, lists:keyreplace(H, 1, Value, {H, N})}
             end;
         false ->
             error
     end;
-delete([], _Dict) ->
+delete([], _) ->
     error.
 
 
 %%--------------------------------------------------------------------
 %% @doc
 %%  Store the value recursively into the dict and sub dicts.
-%% @spec store(Key, Dict, Value) -> NDict
+%% @spec (Key, Dict, Value) -> NDict
 %% @end
 %% @private
 %%--------------------------------------------------------------------
-store([H], Dict, Value) ->
-    case is_dict(Dict) of
-        true ->
-            dict:store(H, Value, Dict);
-        false ->
-            error
-    end;
-store([H | T], Dict, Value) ->
-    case is_dict(Dict) of
-        true ->
-            case dict:find(H, Dict) of
-                {ok, TValue} ->
-                    case store(T, TValue, Value) of
-                        error ->
-                            error;
-                        N ->
-                            dict:store(H, N, Dict)
-                    end;
-                _ ->
-                    New = dict:new(),
-                    case store(T, New, Value) of
-                        error ->
-                            error;
-                        N ->
-                            dict:store(H, N, Dict)
-                    end
+store([H], {obj, Object}, Value) ->
+   case lists:keytake(H, 1, Object) of
+       {value, _, Object2} ->
+           {obj, [{H, Value} | Object2]};
+       false ->
+           {obj, [{H, Value} | Object]}
+   end;
+store([H | T], {obj, Object}, Value) ->
+    case lists:keysearch(H, 1, Object) of
+        {value, {H,  TValue = {obj, _}}} ->
+            case store(T, TValue, Value) of
+                error ->
+                    error;
+                N ->
+                    {obj, lists:keyreplace(H, 1, Object, {H, N})}
+            end;
+        {value, {H, _}} ->
+            case store(T, {obj, []}, Value) of
+                error ->
+                    error;
+                N ->
+                    {obj, lists:keyreplace(H, 1, Object, {H, N})}
             end;
         false ->
-            error
+            case store(T, {obj, []}, Value) of
+                error ->
+                    error;
+                N ->
+                    {obj, [{H, N} | Object]}
+            end
     end;
-store([], _Dict, _Value) ->
+store([], _, _) ->
     error.
 
-%%--------------------------------------------------------------------
-%% @doc
-%%  Check to see if the value is a dict.
-%% @spec is_dict(Value) -> true | false
-%% @end
-%% @private
-%%--------------------------------------------------------------------
-is_dict({dict, _, _, _, _, _, _, _, _}) ->
-    true;
-is_dict(_) ->
-    false.
 
 %%====================================================================
 %%% Tests
 %%====================================================================
+store_test() ->
+    Store1 = store([<<"hello">>], {obj, []}, <<"super">>),
+    ?assertMatch({ok, <<"super">>}, get_item([<<"hello">>], Store1)),
+    Store2 = store([<<"hello">>, <<"goodbye">>], Store1, 33),
+    Store3 = store([<<"hello">>, <<"foo">>], Store2, [1, 2, 3]),
+    Store4 = store([<<"hello">>, <<"doob">>, <<"zoob">>], Store3, <<"HelloAll">>),
+    ?assertMatch({ok, 33}, get_item([<<"hello">>, <<"goodbye">>], Store4)),
+    ?assertMatch({ok, [1, 2, 3]}, get_item([<<"hello">>, <<"foo">>], Store4)),
+    ?assertMatch({ok, <<"HelloAll">>}, get_item([<<"hello">>, <<"doob">>, <<"zoob">>], Store4)).
+
+
+delete_test() ->
+    Store1 = store([<<"hello">>], {obj, []}, <<"super">>),
+    Store2 = store([<<"hello">>, <<"goodbye">>], Store1, 33),
+    Store3 = store([<<"hello">>, <<"foo">>], Store2, [1, 2, 3]),
+    Store4 = store([<<"hello">>, <<"doob">>, <<"zoob">>], Store3, <<"HelloAll">>),
+    Store5 = delete([<<"hello">>, <<"foo">>], Store4),
+    ?assertMatch(error, get_item([<<"hello">>, <<"foo">>], Store5)),
+    Store6 = delete([<<"hello">>, <<"doob">>], Store5),
+    ?assertMatch(error, get_item([<<"hello">>, <<"doob">>, <<"zoob">>], Store6)).
+
