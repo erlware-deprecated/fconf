@@ -32,32 +32,21 @@
 -module(fconf).
 
 
--export([start_config/2, start_config/3, stop_config/1, parse_config/2, store/3, get_value/2,
+-export([start_config/2, stop_config/1, add_config/2, store/3, get_value/2,
          get_value/3, delete/2, exit/1]).
 
 %%====================================================================
 %% API
 %%====================================================================
-
-%%--------------------------------------------------------------------
-%% @doc
-%%   Start a new config with a handler
-%%
-%% @spec start_config(Name, Handler) -> ok
-%% @end
-%%--------------------------------------------------------------------
-start_config(Name, Handler) ->
-    fconf_conf_sup:start_config(Name, Handler).
-
 %%--------------------------------------------------------------------
 %% @doc
 %%   Start a new config with a handler and and override
 %%
-%% @spec start_config(Name, Handler, Override) -> ok
+%% @spec start_config(Name, Override) -> ok
 %% @end
 %%--------------------------------------------------------------------
-start_config(Name, Handler, Override) ->
-    fconf_conf_sup:start_config(Name, Handler, Override).
+start_config(Name, Override) ->
+    fconf_conf_sup:start_config(Name, Override).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -70,14 +59,15 @@ stop_config(Name) ->
 
 %%--------------------------------------------------------------------
 %% @doc
-%%  Parse the buildfile specified and merge it at the top level.
+%%  Add a config to the system. The config must be in the format
+%% that the system can understand and use.
 %%
-%% @spec parse_config(Name, BuildFile) -> ok
+%% @spec add_config(Name, AdditionalConfig) -> ok
 %% @end
 %%--------------------------------------------------------------------
-parse_config(Name, BuildFile) ->
+add_config(Name, AdditionalConfig) ->
     Pid = fconf_registry:find_registered(Name),
-    gen_server:call(Pid, {parse, BuildFile}, 5000).
+    gen_server:call(Pid, {merge, AdditionalConfig}, 5000).
 
 
 %%-------------------------------------------------------------------
