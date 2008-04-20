@@ -36,7 +36,7 @@
 -include("eunit.hrl").
 
 %% API
--export([start_link/2]).
+-export([start_link/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -45,7 +45,7 @@
 
 -define(SERVER, ?MODULE).
 
--record(state, {parser, store, name}).
+-record(state, {parser, store, name, override}).
 
 %%====================================================================
 %% API
@@ -54,11 +54,11 @@
 %% @doc
 %% Starts the server
 %%
-%% @spec start_link(Name, Parser) -> {ok,Pid} | ignore | {error,Error}
+%% @spec start_link(Name, Parser, Override) -> {ok,Pid} | ignore | {error,Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Name, Parser) ->
-    gen_server:start_link(?MODULE, [Name, Parser], {obj, []}).
+start_link(Name, Parser, Override) ->
+    gen_server:start_link(?MODULE, [Name, Parser, Override]).
 
 
 %%====================================================================
@@ -75,9 +75,9 @@ start_link(Name, Parser) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Name, Parser]) ->
+init([Name, Parser, Override]) ->
     fconf_registry:register_config(Name, self()),
-    {ok, #state{parser=Parser, name=Name, store={obj, []}}}.
+    {ok, #state{parser=Parser, name=Name, store={obj, []}, override=Override}}.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -91,12 +91,24 @@ init([Name, Parser]) ->
 %%                                      {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({get, {path, Key}}, _From, State = #state{store=Store}) ->
+handle_call({get, {path, Key}}, _From, State = #state{store=Store, override=undefined}) ->
     case get_item(Key, Store) of
         {ok, Reply} ->
             {reply, Reply, State};
         error ->
             {reply, undefined, State}
+    end;
+handle_call({get, {path, Key}}, _From, State = #state{store=Store, override=OverStore}) ->
+    case get_item(Key, OverStore) of
+        {ok, Reply} ->
+            {reply, Reply, State};
+        error ->
+            case get_item(Key, Store) of
+                {ok, Reply} ->
+                    {reply, Reply, State};
+                error ->
+                    {reply, undefined, State}
+            end
     end;
 handle_call({parse, BuildFile}, _From, State = #state{store=Store,
                                                      parser=Parser}) ->
@@ -190,7 +202,7 @@ handle_parse_output(Store, NewStore) ->
 %%--------------------------------------------------------------------
 %% @doc
 %%  merge the values for key.
-%% @spec merge_key(Key, V1, V2) -> NVal
+%% @spec (V1, V2) -> NVal
 %% @end
 %% @private
 %%--------------------------------------------------------------------

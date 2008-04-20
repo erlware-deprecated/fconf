@@ -32,7 +32,7 @@
 -module(fconf).
 
 
--export([start_config/2, stop_config/1, parse_config/2, store/3, get_value/2,
+-export([start_config/2, start_config/3, stop_config/1, parse_config/2, store/3, get_value/2,
          get_value/3, delete/2, exit/1]).
 
 %%====================================================================
@@ -41,13 +41,23 @@
 
 %%--------------------------------------------------------------------
 %% @doc
-%%   Start a new config
+%%   Start a new config with a handler
 %%
 %% @spec start_config(Name, Handler) -> ok
 %% @end
 %%--------------------------------------------------------------------
 start_config(Name, Handler) ->
     fconf_conf_sup:start_config(Name, Handler).
+
+%%--------------------------------------------------------------------
+%% @doc
+%%   Start a new config with a handler and and override
+%%
+%% @spec start_config(Name, Handler, Override) -> ok
+%% @end
+%%--------------------------------------------------------------------
+start_config(Name, Handler, Override) ->
+    fconf_conf_sup:start_config(Name, Handler, Override).
 
 %%--------------------------------------------------------------------
 %% @doc

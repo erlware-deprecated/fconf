@@ -34,7 +34,7 @@
 -behaviour(supervisor).
 
 %% API
--export([start_link/0, start_config/2, stop_config/1]).
+-export([start_link/0, start_config/2, start_config/3, stop_config/1]).
 
 %% Supervisor callbacks
 -export([init/1]).
@@ -70,19 +70,31 @@ start_link() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    AChild = {fconf_engine, {fconf_engine, start_link,[]},
-              temporary,2000,worker,[fconf_engine]},
-    {ok,{{simple_one_for_one,0,1}, [AChild]}}.
+    Conf = {fconf_engine, {fconf_engine, start_link,[]},
+            temporary,2000,worker,[fconf_engine]},
+    {ok,{{simple_one_for_one,0,1}, [Conf]}}.
 
 %%--------------------------------------------------------------------
 %% @doc
-%%  Start a new config with the specified config name.
+%%  Start a new config with the specified config name and
+%%  a parse handler
 %%
 %% @spec start_config(Name, Handler) -> ok
 %% @end
 %%--------------------------------------------------------------------
 start_config(Name, Handler) ->
-    supervisor:start_child(?SERVER, [Name, Handler]).
+    supervisor:start_child(?SERVER, [Name, Handler, undefined]).
+
+%%--------------------------------------------------------------------
+%% @doc
+%%  Start a new config with the specified config name,
+%%  a parse handler and an override.
+%%
+%% @spec start_config(Name, Handler, Override) -> ok
+%% @end
+%%--------------------------------------------------------------------
+start_config(Name, Handler, Override) ->
+    supervisor:start_child(?SERVER, [Name, Handler, Override]).
 
 %%--------------------------------------------------------------------
 %% @doc
