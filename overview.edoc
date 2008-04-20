@@ -1,0 +1,15 @@
+@title The Flexible Config System
+@doc
+
+<p> This provides a really simple and straitforward means of provide a
+nice heirarchical config mechinism for erlang otp based systems.  </p>
+
+<p>
+The system provides for making heirarchical queries into the config system. The api for these queries are defined in the fconf module.
+
+Generally queries can be in the form "some.path.to.thing"
+
+</p>
+
+@author Eric Merritt
+@copyright 2007, 2008 Erlware
